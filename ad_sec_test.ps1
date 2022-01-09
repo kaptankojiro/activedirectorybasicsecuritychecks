@@ -10,6 +10,10 @@ Write-Host "This script requires administrative rights." -ForegroundColor red -B
 #https://0xinfection.github.io/posts/wmi-ad-enum/
 #https://4sysops.com/archives/perform-active-directory-security-assessment-using-powershell/
 #https://docs.microsoft.com/en-us/windows-server/security/windows-services/security-guidelines-for-disabling-system-services-in-windows-server
+#https://adsecurity.org/
+#https://nxlog.co/documentation/nxlog-user-guide/ad-domain-controller.html
+
+
 
 
 #CSS Zone
@@ -22,32 +26,24 @@ $css = @"
         font-family: Arial, Helvetica, sans-serif;
         color: #b32d00;
         font-size: 20px;
-
     }
-
-    
     h2 {
 
         font-family: Arial, Helvetica, sans-serif;
         color: #000099;
         font-size: 16px;
 
-    }
-
-    
-    
+    } 
    table {
 		font-size: 12px;
 		border: 0px; 
 		font-family: Arial, Helvetica, sans-serif;
-	} 
-	
+	} 	
     td {
 		padding: 4px;
 		margin: 0px;
 		border: 0;
-	}
-	
+	}	
     th {
         background: #6691b2;
         background: linear-gradient(#49708f, #293f50);
@@ -57,26 +53,17 @@ $css = @"
         padding: 10px 15px;
         vertical-align: middle;
 	}
-
     tbody tr:nth-child(even) {
         background: #f0f0f2;
-    }
-    
-
-
+    }    
     #CreationDate {
 
         font-family: Arial, Helvetica, sans-serif;
         color: #ff3300;
         font-size: 12px;
-
     }
-
-
-
 </style>
 "@
-
 
 #Variables
 $inactiveAccounts = $LastLoggedOnDate = $(Get-Date) - $(New-TimeSpan -days 75)  
@@ -106,9 +93,8 @@ $patches = Get-WmiObject -Class win32_quickfixengineering |  ConvertTo-Html -Pre
 $shadow = vssadmin list writers | Select-String "writer name" | ConvertTo-Html -PreContent "<h1>Shadow Copy Writers</h1>" 
 ConvertTo-Html -Title "Active Directory Basic Information" -Body "$domainInfo $adDomain $dc $forest $trust $domainPolicy $patches $shares $shadow  " -Head $css -PostContent "<p id='CreationDate'>Creation Date: $(Get-Date)</p>" | Out-File domainInformation.html
 
-
 #User Check
-Write-Host "Creating user information report..." -ForegroundColor red -BackgroundColor white
+Write-Host "Creating users information report..." -ForegroundColor red -BackgroundColor white
 $krbtgt = Get-ADUser krbtgt -Properties Created, PasswordLastSet, Enabled, SID | select Created, PasswordLastSet, Enabled, SID | ConvertTo-Html -PreContent "<h1>krbtgt Status</h1>" # 
 $useDESkeyOnly = Get-aduser -filter * -properties Name, UseDESKeyOnly | where {$_.UseDESKeyOnly -eq "true" }  | select name,enabled, distinguishedName,LastLogonDate,UseDESKeyOnly | ConvertTo-Html -PreContent "<h1>Use DES Key Only(True)</h1>"
 $allowReversibleEnc = Get-aduser -filter * -properties Name, AllowReversiblePasswordEncryption     | where {$_.AllowReversiblePasswordEncryption       -eq "true" }   | select name,enabled, distinguishedName,LastLogonDate,AllowReversiblePasswordEncryption | ConvertTo-Html -PreContent "<h1>Allow Reversible Encrpytion(True)</h1>"
@@ -134,13 +120,11 @@ $adGroups = Get-ADGroup -Filter *  | ConvertTo-Html -PreContent "<h1>AD Groups</
 ConvertTo-Html -Title " Active Directory User Accounts Check List" -Body "    $userReport   $adPolicy $krbtgt $spn $ou $adGroups $lockedAccounts $kerberosPreAuth $disabledAccounts  $cannotChangePassword $allowReversibleEnc $accountNotDelegated $passwordNeverExpires $inactiveAccounts $enterpriseAdmins $domainAdmins $schemaAdmins $accountOperators $serverOperators $gpCreatorOwners $dnsAdmins $enterpriseKeyAdmins" -Head $css -PostContent "<p id='CreationDate'>Creation Date: $(Get-Date)</p>" | Out-File  userAccountControl.html
 
 #Computer Check
-
-
+Write-Host "Creating computers information report..." -ForegroundColor red -BackgroundColor white
 $inactiveComputers= Get-ADComputer -Filter {lastlogontimestamp -lt $time}  -Properties Name,OperatingSystem , lastlogontimestamp| Select Name,OperatingSystem ,@{N='lastlogontimestamp'; E={[DateTime]::FromFileTime($_.lastlogontimestamp)}} | ConvertTo-Html -PreContent "<h1>Inactive Computers</h1>" 
 $opSystems = Get-ADComputer -Filter "name -like '*'" -Properties operatingSystem | group -Property operatingSystem | Select Name,Count  | ConvertTo-Html -PreContent "<h1>OS Information</h1>"
 $disabledComputers = Get-AdComputer -filter * | fl  | where {$_.enabled -eq "false"}  | ConvertTo-Html -PreContent "<h1>Disabled Comptuers</h1>"
-ConvertTo-Html -Title "Active Directory Computers" -Body "computerReport $inactiveComputers $opSystems  " -Head $css -PostContent "<p id='CreationDate'>Creation Date: $(Get-Date)</p>" | Out-File computers.html
-
+ConvertTo-Html -Title "Active Directory Computers" -Body "$computerReport $inactiveComputers $opSystems  " -Head $css -PostContent "<p id='CreationDate'>Creation Date: $(Get-Date)</p>" | Out-File computers.html
 
 #Service Check
 Write-Host "Creatings service is ok to disable check ..." -ForegroundColor red -BackgroundColor white
@@ -212,8 +196,6 @@ $securityEventList=  4618, 4649, 4719, 4765, 4766, 4794, 4897, 4964, 5124,
                        ,4879, 4880, 4881, 4883, 4884, 4886, 4887, 4888, 4889,
                        ,4891, 4893, 4894, 4895, 4898, 5136, 5137
 
-
-
 $i=0;
 foreach ($eventId in $securityEventList)
     {
@@ -227,10 +209,7 @@ foreach ($eventId in $securityEventList)
          {
             if ($_.Exception -match "No events were found that match the specified selection criteria") 
            { Write-Output  $eventId >> logsNotFound.csv
-
-   }
-         }
-     }
+ } } }
 
 Write-Host "Tests Completed"  -ForegroundColor red -BackgroundColor white
 Write-Host "Check the Related Folder"  -ForegroundColor red -BackgroundColor white
