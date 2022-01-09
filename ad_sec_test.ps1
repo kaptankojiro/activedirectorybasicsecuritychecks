@@ -13,9 +13,6 @@ Write-Host "This script requires administrative rights." -ForegroundColor red -B
 #https://adsecurity.org/
 #https://nxlog.co/documentation/nxlog-user-guide/ad-domain-controller.html
 
-
-
-
 #CSS Zone
 $css = @"
 <title>Active Directory Reports</title>
